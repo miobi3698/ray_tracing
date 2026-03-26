@@ -15,7 +15,7 @@ main :: proc() {
   camera_center := point3{0, 0, 0}
 
   viewport_u := vec3{viewport_width, 0, 0}
-  viewport_v := vec3{0, -viewport_width, 0}
+  viewport_v := vec3{0, -viewport_height, 0}
 
   pixel_delta_u := vec3_div(viewport_u, f64(image_width))
   pixel_delta_v := vec3_div(viewport_v, f64(image_height))
@@ -53,9 +53,22 @@ main :: proc() {
 color :: vec3
 
 ray_color :: proc(r: ray) -> color {
+  if hit_sphere(point3{0, 0, -1}, 0.5, r) {
+    return color{1, 0, 0}
+  }
+
   unit_direction := vec3_norm(r.direction)
   a := 0.5 * (unit_direction.y + 1)
   return color{1, 1, 1} * (1.0 - a) + color{0.5, 0.7, 1} * a
+}
+
+hit_sphere :: proc(center: point3, radius: f64, r: ray) -> bool {
+  oc := center - r.origin
+  a := vec3_dot(r.direction, r.direction)
+  b := -2.0 * vec3_dot(r.direction, oc)
+  c := vec3_dot(oc, oc) - radius*radius
+  discriminant := b*b - 4*a*c
+  return discriminant >= 0
 }
 
 write_color :: proc(x, y: i32, pixel_color: color) {
