@@ -4,17 +4,20 @@ import "core:math"
 import rl "vendor:raylib"
 
 camera :: struct {
-	aspect_ratio:  f64,
-	image_width:   int,
-	image_height:  int,
-	center:        point3,
-	pixel00_loc:   point3,
-	pixel_delta_u: vec3,
-	pixel_delta_v: vec3,
+	aspect_ratio:       f64,
+	image_width:        int,
+	image_height:       int,
+	samples_per_pixel:  int,
+	pixel_sample_scale: f64,
+	center:             point3,
+	pixel00_loc:        point3,
+	pixel_delta_u:      vec3,
+	pixel_delta_v:      vec3,
 }
 
-camera_new :: proc(aspect_ratio: f64, image_width: int) -> camera {
+camera_new :: proc(aspect_ratio: f64, image_width: int, samples_per_pixel: int) -> camera {
 	image_height := int(f64(image_width) / aspect_ratio)
+	pixel_sample_scale := 1.0 / f64(samples_per_pixel)
 
 	focal_length := 1.0
 	viewport_height := 2.0
@@ -34,6 +37,8 @@ camera_new :: proc(aspect_ratio: f64, image_width: int) -> camera {
 		aspect_ratio,
 		image_width,
 		image_height,
+		samples_per_pixel,
+		pixel_sample_scale,
 		center,
 		pixel00_loc,
 		pixel_delta_u,
@@ -46,11 +51,13 @@ camera_render :: proc(c: camera, world: hittable) -> rl.RenderTexture2D {
 	rl.BeginTextureMode(render_texture)
 	for j in 0 ..< c.image_height {
 		for i in 0 ..< c.image_width {
-			pixel_center := c.pixel00_loc + (c.pixel_delta_u * f64(i)) + (c.pixel_delta_v * f64(j))
-			ray_direction := pixel_center - c.center
-			r := ray{c.center, ray_direction}
-			pixel_color := camera_ray_color(r, world)
-			camera_write_color(i, c.image_height - j - 1, pixel_color)
+			pixel_color := color{}
+
+			for sample in 0 ..< c.samples_per_pixel {
+				r := camera_get_ray(c, i, j)
+				pixel_color += ray_color(r, world)
+			}
+			write_color(i, c.image_height - j - 1, pixel_color * c.pixel_sample_scale)
 		}
 
 		rl.TraceLog(.INFO, "Scanlines remaining: %d", c.image_height - j)
@@ -61,9 +68,23 @@ camera_render :: proc(c: camera, world: hittable) -> rl.RenderTexture2D {
 	return render_texture
 }
 
+camera_get_ray :: proc(c: camera, i, j: int) -> ray {
+	offset := sample_square()
+	pixel_sample :=
+		c.pixel00_loc +
+		(c.pixel_delta_u * (f64(i) + offset.x)) +
+		(c.pixel_delta_v * (f64(j) + offset.y))
+
+	return ray{c.center, pixel_sample - c.center}
+}
+
+sample_square :: proc() -> vec3 {
+	return vec3{random_f64() - 0.5, random_f64() - 0.5, 0}
+}
+
 color :: vec3
 
-camera_ray_color :: proc(r: ray, world: hittable) -> color {
+ray_color :: proc(r: ray, world: hittable) -> color {
 	rec := hit_record{}
 	if hit(world, r, interval{0, math.F64_MAX}, &rec) {
 		return (rec.normal + color{1, 1, 1}) * 0.5
@@ -74,10 +95,12 @@ camera_ray_color :: proc(r: ray, world: hittable) -> color {
 	return color{1, 1, 1} * (1.0 - a) + color{0.5, 0.7, 1} * a
 }
 
-camera_write_color :: proc(x, y: int, pixel_color: color) {
-	ir := u8(255.999 * pixel_color.r)
-	ig := u8(255.999 * pixel_color.g)
-	ib := u8(255.999 * pixel_color.b)
+color_intensity :: interval{0.000, 0.999}
+
+write_color :: proc(x, y: int, pixel_color: color) {
+	ir := u8(256 * interval_clamp(color_intensity, pixel_color.r))
+	ig := u8(256 * interval_clamp(color_intensity, pixel_color.g))
+	ib := u8(256 * interval_clamp(color_intensity, pixel_color.b))
 
 	rl.DrawPixel(i32(x), i32(y), {ir, ig, ib, 255})
 }
