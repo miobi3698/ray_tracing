@@ -26,3 +26,30 @@ vec3_norm :: proc(v: vec3) -> vec3 {
 	return v / vec3_length(v)
 }
 
+vec3_random :: proc() -> vec3 {
+	return vec3{random_f64(), random_f64(), random_f64()}
+}
+
+vec3_random_range :: proc(min, max: f64) -> vec3 {
+	return vec3{random_f64_range(min, max), random_f64_range(min, max), random_f64_range(min, max)}
+}
+
+vec3_random_unit_vector :: proc() -> vec3 {
+	for {
+		p := vec3_random_range(-1, 1)
+		lensq := vec3_dot(p, p)
+		if 1e-160 < lensq && lensq <= 1 {
+			return vec3_div(p, math.sqrt(lensq))
+		}
+	}
+}
+
+vec3_random_on_hemisphere :: proc(normal: vec3) -> vec3 {
+	on_unit_sphere := vec3_random_unit_vector()
+	if vec3_dot(on_unit_sphere, normal) > 0.0 {
+		return on_unit_sphere
+	} else {
+		return -on_unit_sphere
+	}
+}
+

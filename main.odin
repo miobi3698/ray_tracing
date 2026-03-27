@@ -9,7 +9,8 @@ main :: proc() {
 	aspect_ratio := 16.0 / 9
 	image_width := 400
 	samples_per_pixel := 100
-	cam := camera_new(aspect_ratio, image_width, samples_per_pixel)
+	max_depth := 50
+	cam := camera_new(aspect_ratio, image_width, samples_per_pixel, max_depth)
 
 	rl.InitWindow(i32(cam.image_width), i32(cam.image_height), "Ray Tracing in One Weekend")
 	defer rl.CloseWindow()

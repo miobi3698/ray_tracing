@@ -8,6 +8,7 @@ camera :: struct {
 	image_width:        int,
 	image_height:       int,
 	samples_per_pixel:  int,
+	max_depth:          int,
 	pixel_sample_scale: f64,
 	center:             point3,
 	pixel00_loc:        point3,
@@ -15,7 +16,12 @@ camera :: struct {
 	pixel_delta_v:      vec3,
 }
 
-camera_new :: proc(aspect_ratio: f64, image_width: int, samples_per_pixel: int) -> camera {
+camera_new :: proc(
+	aspect_ratio: f64,
+	image_width: int,
+	samples_per_pixel: int,
+	max_depth: int,
+) -> camera {
 	image_height := int(f64(image_width) / aspect_ratio)
 	pixel_sample_scale := 1.0 / f64(samples_per_pixel)
 
@@ -38,6 +44,7 @@ camera_new :: proc(aspect_ratio: f64, image_width: int, samples_per_pixel: int) 
 		image_width,
 		image_height,
 		samples_per_pixel,
+		max_depth,
 		pixel_sample_scale,
 		center,
 		pixel00_loc,
@@ -55,7 +62,7 @@ camera_render :: proc(c: camera, world: hittable) -> rl.RenderTexture2D {
 
 			for sample in 0 ..< c.samples_per_pixel {
 				r := camera_get_ray(c, i, j)
-				pixel_color += ray_color(r, world)
+				pixel_color += ray_color(r, c.max_depth, world)
 			}
 			write_color(i, c.image_height - j - 1, pixel_color * c.pixel_sample_scale)
 		}
@@ -84,10 +91,15 @@ sample_square :: proc() -> vec3 {
 
 color :: vec3
 
-ray_color :: proc(r: ray, world: hittable) -> color {
+ray_color :: proc(r: ray, depth: int, world: hittable) -> color {
+	if depth <= 0 {
+		return {}
+	}
+
 	rec := hit_record{}
-	if hit(world, r, interval{0, math.F64_MAX}, &rec) {
-		return (rec.normal + color{1, 1, 1}) * 0.5
+	if hit(world, r, interval{0.001, math.F64_MAX}, &rec) {
+		direction := rec.normal + vec3_random_unit_vector()
+		return ray_color(ray{rec.p, direction}, depth - 1, world) * 0.5
 	}
 
 	unit_direction := vec3_norm(r.direction)
@@ -97,10 +109,22 @@ ray_color :: proc(r: ray, world: hittable) -> color {
 
 color_intensity :: interval{0.000, 0.999}
 
+linear_to_gamma :: proc(linear_component: f64) -> f64 {
+	if linear_component > 0 {
+		return math.sqrt(linear_component)
+	}
+
+	return 0
+}
+
 write_color :: proc(x, y: int, pixel_color: color) {
-	ir := u8(256 * interval_clamp(color_intensity, pixel_color.r))
-	ig := u8(256 * interval_clamp(color_intensity, pixel_color.g))
-	ib := u8(256 * interval_clamp(color_intensity, pixel_color.b))
+	r := linear_to_gamma(pixel_color.r)
+	g := linear_to_gamma(pixel_color.g)
+	b := linear_to_gamma(pixel_color.b)
+
+	ir := u8(256 * interval_clamp(color_intensity, r))
+	ig := u8(256 * interval_clamp(color_intensity, g))
+	ib := u8(256 * interval_clamp(color_intensity, b))
 
 	rl.DrawPixel(i32(x), i32(y), {ir, ig, ib, 255})
 }
