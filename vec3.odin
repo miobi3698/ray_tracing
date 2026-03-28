@@ -65,3 +65,12 @@ vec3_refract :: proc(uv, n: vec3, etai_over_etat: f64) -> vec3 {
 	return r_out_perp + r_out_parallel
 }
 
+vec3_random_in_unit_disk :: proc() -> vec3 {
+	for {
+		p := vec3{random_f64_range(-1, 1), random_f64_range(-1, 1), 0}
+		if vec3_dot(p, p) < 1 {
+			return p
+		}
+	}
+}
+
