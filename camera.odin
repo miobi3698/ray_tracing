@@ -98,8 +98,15 @@ ray_color :: proc(r: ray, depth: int, world: hittable) -> color {
 
 	rec := hit_record{}
 	if hit(world, r, interval{0.001, math.F64_MAX}, &rec) {
-		direction := rec.normal + vec3_random_unit_vector()
-		return ray_color(ray{rec.p, direction}, depth - 1, world) * 0.5
+		scattered := ray{}
+		attenuation := color{}
+		if scatter(rec.mat, r, rec, &attenuation, &scattered) {
+			return attenuation * ray_color(scattered, depth - 1, world)
+		}
+
+		return {}
+		// direction := rec.normal + vec3_random_unit_vector()
+		// return ray_color(ray{rec.p, direction}, depth - 1, world) * 0.5
 	}
 
 	unit_direction := vec3_norm(r.direction)

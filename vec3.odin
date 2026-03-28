@@ -10,6 +10,11 @@ vec3_length :: proc(v: vec3) -> f64 {
 	return math.sqrt(vec3_dot(v, v))
 }
 
+vec3_near_zero :: proc(v: vec3) -> bool {
+	s := 1e-8
+	return (math.abs(v.x) < s) && (math.abs(v.y) < s) && (math.abs(v.z) < s)
+}
+
 vec3_div :: proc(v: vec3, t: f64) -> vec3 {
 	return v * (1.0 / t)
 }
@@ -51,5 +56,9 @@ vec3_random_on_hemisphere :: proc(normal: vec3) -> vec3 {
 	} else {
 		return -on_unit_sphere
 	}
+}
+
+vec3_reflect :: proc(v, n: vec3) -> vec3 {
+	return v - n * 2 * vec3_dot(v, n)
 }
 

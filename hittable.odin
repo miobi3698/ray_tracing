@@ -5,6 +5,7 @@ import "core:math"
 hit_record :: struct {
 	p:          point3,
 	normal:     vec3,
+	mat:        material,
 	t:          f64,
 	front_face: bool,
 }
@@ -37,6 +38,7 @@ hit :: proc(object: hittable, r: ray, ray_t: interval, rec: ^hit_record) -> bool
 sphere :: struct {
 	center: point3,
 	radius: f64,
+	mat:    material,
 }
 
 sphere_hit :: proc(o: sphere, r: ray, ray_t: interval, rec: ^hit_record) -> bool {
@@ -63,6 +65,7 @@ sphere_hit :: proc(o: sphere, r: ray, ray_t: interval, rec: ^hit_record) -> bool
 	rec.p = ray_at(r, rec.t)
 	outward_normal := (rec.p - o.center) / o.radius
 	hit_record_set_face_normal(rec, r, outward_normal)
+	rec.mat = o.mat
 	return true
 }
 
