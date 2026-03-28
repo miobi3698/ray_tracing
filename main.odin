@@ -7,12 +7,14 @@ import rl "vendor:raylib"
 main :: proc() {
 	material_ground := lambertian{color{0.8, 0.8, 0}}
 	material_center := lambertian{color{0.1, 0.2, 0.5}}
-	material_left := metal{color{0.8, 0.8, 0.8}, 0.3}
+	material_left := dielectric{1.50}
+	material_bubble := dielectric{1.00 / 1.50}
 	material_right := metal{color{0.8, 0.6, 0.2}, 1}
 	world := []hittable {
 		sphere{point3{0, -100.5, -1}, 100.0, material_ground},
 		sphere{point3{0, 0, -1.2}, 0.5, material_center},
 		sphere{point3{-1, 0, -1}, 0.5, material_left},
+		sphere{point3{-1, 0, -1}, 0.4, material_bubble},
 		sphere{point3{1, 0, -1}, 0.5, material_right},
 	}
 

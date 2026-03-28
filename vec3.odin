@@ -62,3 +62,10 @@ vec3_reflect :: proc(v, n: vec3) -> vec3 {
 	return v - n * 2 * vec3_dot(v, n)
 }
 
+vec3_refract :: proc(uv, n: vec3, etai_over_etat: f64) -> vec3 {
+	cos_theta := min(vec3_dot(-uv, n), 1)
+	r_out_perp := (uv + n * cos_theta) * etai_over_etat
+	r_out_parallel := n * -math.sqrt(abs(1.0 - vec3_dot(r_out_perp, r_out_perp)))
+	return r_out_perp + r_out_parallel
+}
+
