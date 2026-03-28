@@ -5,38 +5,55 @@ import "core:math/rand"
 import rl "vendor:raylib"
 
 main :: proc() {
-	material_ground := lambertian{color{0.8, 0.8, 0}}
-	material_center := lambertian{color{0.1, 0.2, 0.5}}
-	material_left := dielectric{1.50}
-	material_bubble := dielectric{1.00 / 1.50}
-	material_right := metal{color{0.8, 0.6, 0.2}, 1}
-	world := []hittable {
-		sphere{point3{0, -100.5, -1}, 100.0, material_ground},
-		sphere{point3{0, 0, -1.2}, 0.5, material_center},
-		sphere{point3{-1, 0, -1}, 0.5, material_left},
-		sphere{point3{-1, 0, -1}, 0.4, material_bubble},
-		sphere{point3{1, 0, -1}, 0.5, material_right},
+	world := [dynamic]hittable{}
+
+	ground_material := lambertian{color{0.5, 0.5, 0.5}}
+	append(&world, sphere{point3{0, -1000, 0}, 1000, ground_material})
+
+	for a in -11 ..< 11 {
+		for b in -11 ..< 11 {
+			choose_mat := random_f64()
+			center := point3{f64(a) + 0.9 * random_f64(), 0.2, f64(b) + 0.9 * random_f64()}
+
+			if vec3_length(center - point3{4, 0.2, 0}) > 0.9 {
+				sphere_material: material
+
+				if choose_mat < 0.8 {
+					sphere_material = lambertian{vec3_random() * vec3_random()}
+				} else if choose_mat < 0.95 {
+					sphere_material = metal{vec3_random_range(0.5, 1), random_f64_range(0, 0.5)}
+				} else {
+					sphere_material = dielectric{1.5}
+				}
+
+				append(&world, sphere{center, 0.2, sphere_material})
+			}
+		}
 	}
 
+	append(&world, sphere{point3{0, 1, 0}, 1.0, dielectric{1.5}})
+	append(&world, sphere{point3{-4, 1, 0}, 1.0, lambertian{color{0.4, 0.2, 0.1}}})
+	append(&world, sphere{point3{4, 1, 0}, 1.0, metal{color{0.7, 0.6, 0.5}, 0.0}})
+
 	cam := camera_new(
-		{
-			aspect_ratio = 16.0 / 9,
-			image_width = 400,
-			samples_per_pixel = 100,
-			max_depth = 50,
-			vfov = 20,
-			lookfrom = point3{-2, 2, 1},
-			lookat = point3{0, 0, -1},
-			vup = vec3{0, 1, 0},
-			defocus_angle = 10,
-			focus_dist = 3.4,
-		},
+	{
+		aspect_ratio      = 16.0 / 9,
+		image_width       = 1200,
+		samples_per_pixel = 10, // 500
+		max_depth         = 50,
+		vfov              = 20,
+		lookfrom          = point3{13, 2, 3},
+		lookat            = point3{},
+		vup               = vec3{0, 1, 0},
+		defocus_angle     = 0.6,
+		focus_dist        = 10,
+	},
 	)
 
 	rl.InitWindow(i32(cam.image_width), i32(cam.image_height), "Ray Tracing in One Weekend")
 	defer rl.CloseWindow()
 
-	render_texture := camera_render(cam, world)
+	render_texture := camera_render(cam, world[:])
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
