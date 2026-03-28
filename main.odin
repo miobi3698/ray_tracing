@@ -22,7 +22,20 @@ main :: proc() {
 	image_width := 400
 	samples_per_pixel := 100
 	max_depth := 50
-	cam := camera_new(aspect_ratio, image_width, samples_per_pixel, max_depth)
+	vfov := 20.0
+	lookfrom := point3{-2, 2, 1}
+	lookat := point3{0, 0, -1}
+	vup := vec3{0, 1, 0}
+	cam := camera_new(
+		aspect_ratio,
+		image_width,
+		samples_per_pixel,
+		max_depth,
+		vfov,
+		lookfrom,
+		lookat,
+		vup,
+	)
 
 	rl.InitWindow(i32(cam.image_width), i32(cam.image_height), "Ray Tracing in One Weekend")
 	defer rl.CloseWindow()

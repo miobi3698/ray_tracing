@@ -15,10 +15,6 @@ vec3_near_zero :: proc(v: vec3) -> bool {
 	return (math.abs(v.x) < s) && (math.abs(v.y) < s) && (math.abs(v.z) < s)
 }
 
-vec3_div :: proc(v: vec3, t: f64) -> vec3 {
-	return v * (1.0 / t)
-}
-
 vec3_dot :: proc(u, v: vec3) -> f64 {
 	return u.x * v.x + u.y * v.y + u.z * v.z
 }
@@ -44,7 +40,7 @@ vec3_random_unit_vector :: proc() -> vec3 {
 		p := vec3_random_range(-1, 1)
 		lensq := vec3_dot(p, p)
 		if 1e-160 < lensq && lensq <= 1 {
-			return vec3_div(p, math.sqrt(lensq))
+			return p / math.sqrt(lensq)
 		}
 	}
 }

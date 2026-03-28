@@ -9,11 +9,16 @@ camera :: struct {
 	image_height:       int,
 	samples_per_pixel:  int,
 	max_depth:          int,
+	vfov:               f64,
+	lookfrom:           point3,
+	lookat:             point3,
+	vup:                vec3,
 	pixel_sample_scale: f64,
 	center:             point3,
 	pixel00_loc:        point3,
 	pixel_delta_u:      vec3,
 	pixel_delta_v:      vec3,
+	u, v, w:            vec3,
 }
 
 camera_new :: proc(
@@ -21,22 +26,31 @@ camera_new :: proc(
 	image_width: int,
 	samples_per_pixel: int,
 	max_depth: int,
+	vfov: f64,
+	lookfrom, lookat: point3,
+	vup: vec3,
 ) -> camera {
 	image_height := int(f64(image_width) / aspect_ratio)
 	pixel_sample_scale := 1.0 / f64(samples_per_pixel)
+	center := lookfrom
 
-	focal_length := 1.0
-	viewport_height := 2.0
+	focal_length := vec3_length(lookfrom - lookat)
+	theta := degrees_to_radians(vfov)
+	h := math.tan(theta / 2)
+	viewport_height := 2 * h * focal_length
 	viewport_width := viewport_height * aspect_ratio
-	center := point3{0, 0, 0}
 
-	viewport_u := vec3{viewport_width, 0, 0}
-	viewport_v := vec3{0, -viewport_height, 0}
+	w := vec3_norm(lookfrom - lookat)
+	u := vec3_norm(vec3_cross(vup, w))
+	v := vec3_cross(w, u)
 
-	pixel_delta_u := vec3_div(viewport_u, f64(image_width))
-	pixel_delta_v := vec3_div(viewport_v, f64(image_height))
+	viewport_u := u * viewport_width
+	viewport_v := -v * viewport_height
 
-	viewport_upper_left := center - vec3{0, 0, focal_length} - viewport_u / 2 - viewport_v / 2
+	pixel_delta_u := viewport_u / f64(image_width)
+	pixel_delta_v := viewport_v / f64(image_height)
+
+	viewport_upper_left := center - w * focal_length - viewport_u / 2 - viewport_v / 2
 	pixel00_loc := viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v)
 
 	return camera {
@@ -45,11 +59,18 @@ camera_new :: proc(
 		image_height,
 		samples_per_pixel,
 		max_depth,
+		vfov,
+		lookfrom,
+		lookat,
+		vup,
 		pixel_sample_scale,
 		center,
 		pixel00_loc,
 		pixel_delta_u,
 		pixel_delta_v,
+		u,
+		v,
+		w,
 	}
 }
 
