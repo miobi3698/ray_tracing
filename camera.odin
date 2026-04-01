@@ -126,7 +126,7 @@ camera_get_ray :: proc(c: camera, i, j: int) -> ray {
 		(c.pixel_delta_v * (f64(j) + offset.y))
 
 	ray_origin := c.center if c.defocus_angle <= 0 else defocus_disk_sample(c)
-	ray_direction := pixel_sample - c.center
+	ray_direction := pixel_sample - ray_origin
 	return ray{ray_origin, ray_direction}
 }
 
