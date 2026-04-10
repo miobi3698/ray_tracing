@@ -50,10 +50,21 @@ main :: proc() {
 	},
 	)
 
+	pixel_buffer := make([]rl.Color, cam.image_width * cam.image_height)
+	defer delete(pixel_buffer)
+	camera_render(&pixel_buffer, cam, world[:])
+
 	rl.InitWindow(i32(cam.image_width), i32(cam.image_height), "Ray Tracing in One Weekend")
 	defer rl.CloseWindow()
 
-	render_texture := camera_render(cam, world[:])
+	render_texture := rl.LoadRenderTexture(i32(cam.image_width), i32(cam.image_height))
+	rl.BeginTextureMode(render_texture)
+	for y in 0 ..< cam.image_height {
+		for x in 0 ..< cam.image_width {
+			rl.DrawPixel(i32(x), i32(y), pixel_buffer[x + y * cam.image_width])
+		}
+	}
+	rl.EndTextureMode()
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
