@@ -17,7 +17,7 @@ scatter :: proc(
 ) -> bool {
 	switch m in mat {
 	case lambertian:
-		return lambertial_scatter(m, r_in, rec, attenuation, scattered)
+		return lambertian_scatter(m, r_in, rec, attenuation, scattered)
 	case metal:
 		return metal_scatter(m, r_in, rec, attenuation, scattered)
 	case dielectric:
@@ -31,7 +31,7 @@ lambertian :: struct {
 	albedo: color,
 }
 
-lambertial_scatter :: proc(
+lambertian_scatter :: proc(
 	mat: lambertian,
 	r_in: ray,
 	rec: hit_record,
