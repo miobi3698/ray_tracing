@@ -2,6 +2,7 @@ package main
 
 import "core:math"
 import "core:math/rand"
+import "core:thread"
 import rl "vendor:raylib"
 
 main :: proc() {
@@ -52,21 +53,38 @@ main :: proc() {
 
 	pixel_buffer := make([]rl.Color, cam.image_width * cam.image_height)
 	defer delete(pixel_buffer)
-	camera_render(&pixel_buffer, cam, world[:])
+
+	worker_proc :: proc(t: ^thread.Thread) {
+		data := (^worker_data)(t.data)
+		camera_render(data.pixel_buffer, data.cam, data.world)
+	}
+	worker_data :: struct {
+		pixel_buffer: ^[]rl.Color,
+		cam:          camera,
+		world:        hittable,
+	}
+
+	render_data := worker_data{&pixel_buffer, cam, world[:]}
+
+	t := thread.create(worker_proc)
+	t.data = &render_data
+	thread.start(t)
+	defer thread.destroy(t)
 
 	rl.InitWindow(i32(cam.image_width), i32(cam.image_height), "Ray Tracing in One Weekend")
 	defer rl.CloseWindow()
 
 	render_texture := rl.LoadRenderTexture(i32(cam.image_width), i32(cam.image_height))
-	rl.BeginTextureMode(render_texture)
-	for y in 0 ..< cam.image_height {
-		for x in 0 ..< cam.image_width {
-			rl.DrawPixel(i32(x), i32(y), pixel_buffer[x + y * cam.image_width])
-		}
-	}
-	rl.EndTextureMode()
 
 	for !rl.WindowShouldClose() {
+		rl.BeginTextureMode(render_texture)
+		for y in 0 ..< cam.image_height {
+			for x in 0 ..< cam.image_width {
+				rl.DrawPixel(i32(x), i32(y), pixel_buffer[x + y * cam.image_width])
+			}
+		}
+		rl.EndTextureMode()
+
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTexture(render_texture.texture, 0, 0, rl.WHITE)
