@@ -5,6 +5,7 @@ import "core:math/rand"
 import "core:os"
 import "core:thread"
 import rl "vendor:raylib"
+import stbi "vendor:stb/image"
 
 main :: proc() {
 	world := [dynamic]hittable{}
@@ -61,6 +62,7 @@ main :: proc() {
 		from := t.user_index
 		to := t.user_index + 1
 		camera_render(data.pixel_buffer, from, to, data.cam, data.world)
+		rl.TraceLog(.INFO, "Rendered scanline %d", from)
 	}
 	worker_data :: struct {
 		pixel_buffer: ^[][4]u8,
@@ -91,6 +93,19 @@ main :: proc() {
 	render_texture := rl.LoadRenderTexture(i32(cam.image_width), i32(cam.image_height))
 
 	for !rl.WindowShouldClose() {
+		if rl.IsKeyPressed(.P) {
+			stbi.flip_vertically_on_write(true)
+			stbi.write_png(
+				"image.png",
+				i32(cam.image_width),
+				i32(cam.image_height),
+				4,
+				raw_data(pixel_buffer),
+				i32(4 * cam.image_width),
+			)
+			rl.TraceLog(.INFO, "Exported screen to 'image.png'")
+		}
+
 		rl.BeginTextureMode(render_texture)
 		for y in 0 ..< cam.image_height {
 			for x in 0 ..< cam.image_width {
