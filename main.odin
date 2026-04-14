@@ -41,7 +41,8 @@ main :: proc() {
 	{
 		aspect_ratio      = 16.0 / 9,
 		image_width       = 1200,
-		samples_per_pixel = 10, // 500
+		samples_per_pixel = 10,
+		// samples_per_pixel = 500,
 		max_depth         = 50,
 		vfov              = 20,
 		lookfrom          = point3{13, 2, 3},
@@ -55,33 +56,34 @@ main :: proc() {
 	pixel_buffer := make([][4]u8, cam.image_width * cam.image_height)
 	defer delete(pixel_buffer)
 
-	worker_proc :: proc(t: ^thread.Thread) {
+	worker_proc :: proc(t: thread.Task) {
 		data := cast(^worker_data)(t.data)
-		from := data.index * data.chunk_size
-		to := ((data.index + 1) * data.chunk_size) % data.cam.image_height
+		from := t.user_index
+		to := t.user_index + 1
 		camera_render(data.pixel_buffer, from, to, data.cam, data.world)
 	}
 	worker_data :: struct {
 		pixel_buffer: ^[][4]u8,
 		cam:          camera,
 		world:        hittable,
-		index:        int,
-		chunk_count:  int,
-		chunk_size:   int,
 	}
 
-	chunk_count := os.get_processor_core_count()
-	chunk_size := cam.image_height / chunk_count
-	threads := make([dynamic]^thread.Thread, 0, chunk_count)
-	defer delete(threads)
+	thread_count := os.get_processor_core_count()
+	pool: thread.Pool
+	thread.pool_init(&pool, allocator = context.allocator, thread_count = thread_count)
+	defer thread.pool_destroy(&pool)
 
-	for i in 0 ..< chunk_count {
-		t := thread.create(worker_proc)
-		render_data := worker_data{&pixel_buffer, cam, world[:], i, chunk_count, chunk_size}
-		t.data = &render_data
-		append(&threads, t)
-		thread.start(t)
+	for i in 0 ..< cam.image_height {
+		render_data := worker_data{&pixel_buffer, cam, world[:]}
+		thread.pool_add_task(
+			&pool,
+			allocator = context.allocator,
+			procedure = worker_proc,
+			data = &render_data,
+			user_index = i,
+		)
 	}
+	thread.pool_start(&pool)
 
 	rl.InitWindow(i32(cam.image_width), i32(cam.image_height), "Ray Tracing in One Weekend")
 	defer rl.CloseWindow()
@@ -89,15 +91,6 @@ main :: proc() {
 	render_texture := rl.LoadRenderTexture(i32(cam.image_width), i32(cam.image_height))
 
 	for !rl.WindowShouldClose() {
-		for i := 0; i < len(threads); {
-			if t := threads[i]; thread.is_done(t) {
-				thread.destroy(t)
-				ordered_remove(&threads, i)
-			} else {
-				i += 1
-			}
-		}
-
 		rl.BeginTextureMode(render_texture)
 		for y in 0 ..< cam.image_height {
 			for x in 0 ..< cam.image_width {
@@ -111,6 +104,8 @@ main :: proc() {
 		rl.DrawTexture(render_texture.texture, 0, 0, rl.WHITE)
 		rl.EndDrawing()
 	}
+
+	thread.pool_finish(&pool)
 }
 
 degrees_to_radians :: proc(degrees: f64) -> f64 {
