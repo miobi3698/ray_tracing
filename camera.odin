@@ -1,7 +1,6 @@
 package main
 
 import "core:math"
-import rl "vendor:raylib"
 
 camera :: struct {
 	aspect_ratio:       f64,
@@ -96,8 +95,8 @@ camera_new :: proc(config: camera_config) -> camera {
 	return c
 }
 
-camera_render :: proc(pixel_buffer: ^[]rl.Color, c: camera, world: hittable) {
-	for j in 0 ..< c.image_height {
+camera_render :: proc(pixel_buffer: ^[][4]u8, from: int, to: int, c: camera, world: hittable) {
+	for j in from ..< to {
 		for i in 0 ..< c.image_width {
 			pixel_color := color{}
 
@@ -109,11 +108,7 @@ camera_render :: proc(pixel_buffer: ^[]rl.Color, c: camera, world: hittable) {
 			x, y := i, c.image_height - j - 1
 			write_color(&pixel_buffer[x + y * c.image_width], pixel_color * c.pixel_sample_scale)
 		}
-
-		rl.TraceLog(.INFO, "Scanlines remaining: %d", c.image_height - j)
 	}
-
-	rl.TraceLog(.INFO, "Done.")
 }
 
 camera_get_ray :: proc(c: camera, i, j: int) -> ray {
@@ -170,7 +165,7 @@ linear_to_gamma :: proc(linear_component: f64) -> f64 {
 	return 0
 }
 
-write_color :: proc(pixel: ^rl.Color, pixel_color: color) {
+write_color :: proc(pixel: ^[4]u8, pixel_color: color) {
 	r := linear_to_gamma(pixel_color.r)
 	g := linear_to_gamma(pixel_color.g)
 	b := linear_to_gamma(pixel_color.b)
